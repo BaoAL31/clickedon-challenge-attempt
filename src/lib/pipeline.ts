@@ -28,10 +28,21 @@ const MAX_REVISIONS = 3;
 export async function generate(input: GenerateInput): Promise<GenerateResult> {
   const state: MockState = { calls: 0 };
 
-  // The model call can fail transiently (rate limits) or return a truncated
-  // stream. Right now a single hiccup takes down the whole run.
-  const text = await mockStream(input.behavior, state);
-  extractJson(text);
+  // Retry stream call when response is truncated or fails transiently.
+  const MAX_STREAM_RETRIES = 3;
+  let text: string;
+  for (let i = 0; ; i++) {
+    try {
+      text = await mockStream(input.behavior, state);
+      extractJson(text);
+      break;
+    } catch (err) {
+      if (i >= MAX_STREAM_RETRIES - 1) {
+        return { status: "error", attempts: 0 };
+      }
+      // retry
+    }
+  }
 
   // Revise until the draft passes review.
   let attempt = 0;
