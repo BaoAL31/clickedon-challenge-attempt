@@ -36,7 +36,7 @@ export async function generate(input: GenerateInput): Promise<GenerateResult> {
       text = await mockStream(input.behavior, state);
       extractJson(text);
       break;
-    } catch (err) {
+    } catch {
       if (i >= MAX_STREAM_RETRIES - 1) {
         return { status: "error", attempts: 0 };
       }
@@ -46,8 +46,12 @@ export async function generate(input: GenerateInput): Promise<GenerateResult> {
 
   // Revise until the draft passes review.
   let attempt = 0;
-  while (!input.reviewPasses(attempt) && attempt < 50) {
+  while (attempt < MAX_REVISIONS && !input.reviewPasses(attempt)) {
     attempt += 1;
+  }
+
+  if (attempt >= MAX_REVISIONS) {
+    return { status: "error", attempts: attempt };
   }
 
   // Kick off the next stage and return.
