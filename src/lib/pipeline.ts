@@ -40,9 +40,11 @@ export async function generate(input: GenerateInput): Promise<GenerateResult> {
   }
 
   // Kick off the next stage and return.
-  void input.advanceToNextStage().catch(() => {
-    /* ignored */
-  });
+  try {
+    await input.advanceToNextStage();
+  } catch {
+    return { status: "error", attempts: attempt };
+  }
 
   return { status: "ok", attempts: attempt };
 }
